@@ -1,27 +1,3 @@
-# Environment and secrets
-.env
-.env*.local
-
-# Telegram Telethon Session Files (CRITICAL: Never commit these!)
-*.session
-*.session-journal
-
-# Temporary media downloads
-temp_media/
-temp_media/*
-
-# Python cache
 __pycache__/
-*.py[cod]
-*$py.class
 *.pyc
-
-# Logs
-*.log
-
-# Node
-node_modules/
-
-# OS files
-.DS_Store
-Thumbs.db
+temp_media/
