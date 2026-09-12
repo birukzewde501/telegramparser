@@ -1,6 +1,13 @@
 import os
+import sys
 import asyncio
 import logging
+
+if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if sys.stderr and hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
+
 from telethon import TelegramClient, events, Button
 from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument
 
@@ -828,6 +835,44 @@ async def restart_channel_listeners():
         logger.info(f"[LISTEN] ✅ Listener active on {len(channels)} channel(s): {channels}")
 
 # ----------------------------------------------------
+# Cloud / Render Health Check Web Server
+# ----------------------------------------------------
+async def handle_http_health_check(reader, writer):
+    try:
+        await reader.read(1024)
+        response = (
+            b"HTTP/1.1 200 OK\r\n"
+            b"Content-Type: text/plain\r\n"
+            b"Content-Length: 2\r\n"
+            b"Connection: close\r\n\r\n"
+            b"OK"
+        )
+        writer.write(response)
+        await writer.drain()
+    except Exception:
+        pass
+    finally:
+        try:
+            writer.close()
+            await writer.wait_closed()
+        except Exception:
+            pass
+
+async def start_dummy_web_server():
+    """Binds to PORT environment variable so Render Web Service marks deployment as Healthy/Live."""
+    port_str = os.environ.get("PORT")
+    if not port_str:
+        return None
+    try:
+        port = int(port_str)
+        server = await asyncio.start_server(handle_http_health_check, "0.0.0.0", port)
+        logger.info(f"[HTTP] 🌐 Health check web server running on 0.0.0.0:{port}")
+        return server
+    except Exception as e:
+        logger.warning(f"[HTTP] Failed to start health check server: {e}")
+        return None
+
+# ----------------------------------------------------
 # Main Startup
 # ----------------------------------------------------
 async def main():
@@ -835,6 +880,9 @@ async def main():
     logger.info("🚀 STARTING TELEGRAM BROKER AUTOMATION BOT")
     logger.info("="*50)
     
+    # Start health check server if running on Render / Cloud Web Service
+    await start_dummy_web_server()
+
     await bot.start(bot_token=config.BOT_TOKEN)
     me = await bot.get_me()
     logger.info(f"[BOT CLIENT] ✅ Bot @{me.username} is connected and ready.")
