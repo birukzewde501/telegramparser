@@ -2,8 +2,8 @@ import os
 import json
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables from .env file (with override=True to prioritize .env)
+load_dotenv(override=True)
 
 API_ID = int(os.getenv("TELEGRAM_API_ID", "0"))
 API_HASH = os.getenv("TELEGRAM_API_HASH", "")
